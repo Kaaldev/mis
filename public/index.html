@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+<h1> MOST BASIC YOUTUBE MP3 DOWNLOADER EVER</h1>
+<form action="/" method="post">
+    <input type="string" name="url" placeholder="video url here!">
+    <input type="submit" value="submit">
+</form>
+<br>
+    <label for="">Search Music</label>
+    <input id="search" type="string" name="filter" placeholder="Find music">
+    <button onclick="searchMusic()">search</button>
+<br>
+<br>
+    <label for="">Search New Music</label>
+    <input id="searchNew" type="string" name="filter" placeholder="Find music">
+    <button onclick="findNewMusic()">search</button>
+
+
+<button onclick="getAudio()" >Get Audio</button>
+
+<ul id="musicList"></ul>
+<ul id="newMusicList"></ul>
+<div id="waveform"></div>
+<script src="https://unpkg.com/wavesurfer.js"></script>
+<script>
+    var wavesurfer = WaveSurfer.create({
+        container: '#waveform'
+    });
+    const getAudio = (url, text) => {
+        const data = postData(url, text)
+        .then(async (data) => {
+            const file = data.audioFile
+            let base64String = arrayBufferToBase64( file.data )
+            const snd = new Audio("data:audio/wav;base64," + base64String);
+            wavesurfer.load(snd)
+        })
+    }
+    wavesurfer.on('ready',() => wavesurfer.play())
+
+
+    function arrayBufferToBase64( buffer ) {
+	    var binary = '';
+	    var bytes = new Uint8Array( buffer );
+	    var len = bytes.byteLength;
+	    for (var i = 0; i < len; i++) {
+		    binary += String.fromCharCode( bytes[ i ] );
+	    }
+	    return window.btoa( binary );
+    }
+
+async function searchMusic() {
+    document.getElementById('newMusicList').innerHTML = ''
+    document.getElementById('musicList').innerHTML = ''
+    const response = await postData('http://localhost:3000/music/find',{  filter: document.getElementById('search').value })
+    response.forEach((item) => {
+        if(item){
+        let li = document.createElement('li')
+        li.textContent = `${item.title} - ${item.artist}`
+        li.addEventListener('click', (e) => {
+            getAudio('http://localhost:3000/music/play', { data: e.target.textContent })
+        })
+        document.getElementById('musicList').appendChild(li)
+        }
+    })
+}
+
+async function findNewMusic() {
+     document.getElementById('musicList').innerHTML = ''
+    document.getElementById('newMusicList').innerHTML = ''
+    const response = await postData('http://localhost:3000/music/find/online',{  filter: document.getElementById('searchNew').value })
+    response.forEach((obj) => {
+        let li = document.createElement('li')
+        let p = document.createElement('p')
+        let img = document.createElement('img')
+        let div = document.createElement('div')
+        img.setAttribute('videoUrl', obj.url)
+        p.textContent = obj.title
+        p.setAttribute('videoUrl', obj.url)
+        img.setAttribute('src', obj.img)
+        div.appendChild(img)
+        div.appendChild(p)
+        li.appendChild(div)
+        img.addEventListener('click', (e) => {
+            const url = e.target.getAttribute('videourl')
+            loadAudio('http://localhost:3000/', { url: url })
+        })
+        document.getElementById('newMusicList').appendChild(li)
+    })
+}
+const loadAudio = (url, text) => {
+        const data = postData(url, text)
+        .then(async (data) => {
+            console.log(data);
+            document.getElementById('newMusicList').innerHTML = data
+        })
+}
+
+    // Example POST method implementation:
+async function postData(url, data) {
+  // Default options are marked with *
+  const response = await fetch(url, {
+    method: 'POST', // *GET, POST, PUT, DELETE, etc.
+    mode: 'cors', // no-cors, *cors, same-origin
+    cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+    credentials: 'same-origin', // include, *same-origin, omit
+    headers: {
+      'Content-Type': 'application/json'
+      // 'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    redirect: 'follow', // manual, *follow, error
+    referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+    body: JSON.stringify( data ) // body data type must match "Content-Type" header
+  });
+  return response.json(); // parses JSON response into native JavaScript objects
+}
+
+    
+</script>
+</body>
+</html>
